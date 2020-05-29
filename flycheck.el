@@ -11086,7 +11086,21 @@ report style issues as well."
   :package-version '(flycheck . "0.16"))
 
 (defconst flycheck-ruby-rubocop-error-patterns
-  '((info line-start (file-name) ":" line ":" column ": C: "
+  '( ; Stdin patterns (buffers with no backing file)
+    ;; These must be tested before the regular patterns
+    (info line-start (minimal-match (zero-or-more not-newline))
+          "stdin:" line ":" column ": C: "
+          (optional (id (one-or-more (not (any ":")))) ": ") (message) line-end)
+    (warning line-start (minimal-match (zero-or-more not-newline))
+             "stdin:" line ":" column ": W: "
+             (optional (id (one-or-more (not (any ":")))) ": ") (message)
+             line-end)
+    (error line-start (minimal-match (zero-or-more not-newline))
+           "stdin:" line ":" column ": " (or "E" "F") ": "
+           (optional (id (one-or-more (not (any ":")))) ": ") (message)
+           line-end)
+    ;; Regular patterns (buffers with backing files)
+    (info line-start (file-name) ":" line ":" column ": C: "
           (optional (id (one-or-more (not (any ":")))) ": ") (message) line-end)
     (warning line-start (file-name) ":" line ":" column ": W: "
              (optional (id (one-or-more (not (any ":")))) ": ") (message)
@@ -11116,8 +11130,10 @@ See URL `https://rubocop.org/'."
              (config-file "--config" flycheck-rubocoprc)
              (option-flag "--lint" flycheck-rubocop-lint-only)
              ;; Rubocop takes the original file name as argument when reading
-             ;; from standard input
-             "--stdin" source-original)
+             ;; from standard input, but it chokes when that name is the empty
+             ;; string, so fall back to "stdin" in order to handle buffers with
+             ;; no backing file (e.g. org-mode snippet buffers)
+             "--stdin" (eval (or (buffer-file-name) "stdin")))
   :standard-input t
   :working-directory #'flycheck-ruby--find-project-root
   :error-patterns flycheck-ruby-rubocop-error-patterns

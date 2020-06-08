@@ -11073,6 +11073,10 @@ This is either a parent directory containing a Gemfile, or nil."
    buffer-file-name
    (locate-dominating-file buffer-file-name "Gemfile")))
 
+(defun flycheck-ruby--filter-errors (errors)
+  "Filter Rubocop ERRORS attributed to dummy stdin filename."
+  (flycheck-remove-error-file-names (concat default-directory "stdin") errors))
+
 (flycheck-def-config-file-var flycheck-rubocoprc ruby-rubocop ".rubocop.yml")
 
 (flycheck-def-option-var flycheck-rubocop-lint-only nil
@@ -11086,21 +11090,7 @@ report style issues as well."
   :package-version '(flycheck . "0.16"))
 
 (defconst flycheck-ruby-rubocop-error-patterns
-  '( ; Stdin patterns (buffers with no backing file)
-    ;; These must be tested before the regular patterns
-    (info line-start (minimal-match (zero-or-more not-newline))
-          "stdin:" line ":" column ": C: "
-          (optional (id (one-or-more (not (any ":")))) ": ") (message) line-end)
-    (warning line-start (minimal-match (zero-or-more not-newline))
-             "stdin:" line ":" column ": W: "
-             (optional (id (one-or-more (not (any ":")))) ": ") (message)
-             line-end)
-    (error line-start (minimal-match (zero-or-more not-newline))
-           "stdin:" line ":" column ": " (or "E" "F") ": "
-           (optional (id (one-or-more (not (any ":")))) ": ") (message)
-           line-end)
-    ;; Regular patterns (buffers with backing files)
-    (info line-start (file-name) ":" line ":" column ": C: "
+  '((info line-start (file-name) ":" line ":" column ": C: "
           (optional (id (one-or-more (not (any ":")))) ": ") (message) line-end)
     (warning line-start (file-name) ":" line ":" column ": W: "
              (optional (id (one-or-more (not (any ":")))) ": ") (message)
@@ -11137,6 +11127,7 @@ See URL `https://rubocop.org/'."
   :standard-input t
   :working-directory #'flycheck-ruby--find-project-root
   :error-patterns flycheck-ruby-rubocop-error-patterns
+  :error-filter #'flycheck-ruby--filter-errors
   :modes '(enh-ruby-mode ruby-mode)
   :next-checkers '((warning . ruby-reek)
                    (warning . ruby-rubylint)))

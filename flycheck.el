@@ -11075,7 +11075,7 @@ This is either a parent directory containing a Gemfile, or nil."
 
 (defun flycheck-ruby--filter-errors (errors)
   "Filter Rubocop ERRORS attributed to dummy stdin filename."
-  (flycheck-remove-error-file-names (concat default-directory "stdin") errors))
+  (flycheck-remove-error-file-names (expand-file-name "stdin") errors))
 
 (flycheck-def-config-file-var flycheck-rubocoprc ruby-rubocop ".rubocop.yml")
 
